@@ -439,6 +439,13 @@ async function generate(){
     content={url};
   }else{
     if(!selFile){toast('Seleccioná un archivo.','error');return;}
+    // Leer archivo FRESCO del input (evita que la referencia se pierda)
+    const inputId = 'file-'+curType;
+    const freshInput = document.getElementById(inputId);
+    if(freshInput && freshInput.files && freshInput.files[0]){
+      selFile = freshInput.files[0];
+    }
+    if(!selFile){toast('No se pudo leer el archivo. Intentá de nuevo.','error');return;}
   }
 
   const btn=document.getElementById('btnGenerate');
