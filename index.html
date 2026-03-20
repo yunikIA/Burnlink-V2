@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Enlace seguro</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a0a;--surface:#111;--border:#222;
+  --accent:#ff3b1f;--accent2:#ff7c54;--text:#f0ece4;--muted:#555;--green:#2dff6a;
+  --mono:'Space Mono',monospace;--sans:'Syne',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 50% -20%,rgba(255,59,31,.10),transparent);pointer-events:none;z-index:0}
+
+/* Loading */
+#loading{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.loading-flame{font-size:52px;animation:flicker 1s ease-in-out infinite alternate;filter:drop-shadow(0 0 20px rgba(255,59,31,.7))}
+.loading-text{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:3px;text-transform:uppercase}
+@keyframes flicker{0%{transform:scale(1) rotate(-2deg)}100%{transform:scale(1.1) rotate(2deg)}}
+
+/* Generic / Expired - hidden by default */
+#generic,#expired{display:none;position:fixed;inset:0;background:var(--bg);z-index:50;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
+.big-icon{font-size:80px;margin-bottom:24px}
+.screen-title{font-size:28px;font-weight:800;letter-spacing:-1px;margin-bottom:8px}
+.screen-sub{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+
+/* Countdown */
+#countdown{display:none;position:fixed;inset:0;background:var(--bg);z-index:60;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
+.cd-flame{font-size:72px;margin-bottom:20px;animation:flicker 1s ease-in-out infinite alternate;filter:drop-shadow(0 0 30px rgba(255,59,31,.8))}
+.cd-title{font-size:26px;font-weight:800;letter-spacing:-1px;margin-bottom:8px}
+.cd-sub{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-bottom:28px}
+.cd-number{font-family:var(--mono);font-size:72px;font-weight:700;color:var(--accent);text-shadow:0 0 40px rgba(255,59,31,.7);line-height:1;margin-bottom:12px}
+.cd-msg{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:2px}
+
+/* Viewer */
+#viewer{display:none;position:fixed;inset:0;background:var(--bg);z-index:60;flex-direction:column}
+.viewer-bar{background:rgba(17,17,17,.95);border-bottom:1px solid var(--border);padding:12px 24px;text-align:center;flex-shrink:0;backdrop-filter:blur(8px)}
+.viewer-badge{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:2px;text-transform:uppercase}
+.viewer-body{flex:1;overflow-y:auto;display:flex;align-items:center;justify-content:center;padding:32px 24px}
+
+/* Iframe */
+#iframeWrap{display:none;position:fixed;inset:0;z-index:70;background:#000}
+#iframeWrap iframe{width:100%;height:100%;border:none}
+#iframeFallback{display:none;position:absolute;inset:0;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
+
+/* Content types */
+.viewer-label{font-family:var(--mono);font-size:10px;letter-spacing:3px;color:var(--accent);text-transform:uppercase;margin-bottom:20px;text-align:center}
+
+.msg-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;font-family:var(--mono);font-size:16px;line-height:1.8;color:var(--text);max-width:680px;width:100%;white-space:pre-wrap;word-break:break-word;animation:fadeUp .5s ease both}
+
+.img-wrap{max-width:800px;width:100%;text-align:center}
+.img-wrap img{max-width:100%;max-height:70vh;border-radius:12px;border:1px solid var(--border);object-fit:contain;animation:fadeUp .5s ease both}
+
+.qr-wrap{text-align:center}
+.qr-wrap img{max-width:260px;width:100%;border-radius:12px;border:4px solid #fff;animation:fadeUp .5s ease both}
+.qr-hint{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:12px;letter-spacing:1px}
+
+.file-wrap{max-width:460px;width:100%;text-align:center}
+.file-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;display:flex;align-items:center;gap:20px;margin-bottom:20px;animation:fadeUp .5s ease both;text-align:left}
+.file-icon{font-size:48px;flex-shrink:0}
+.file-name{font-family:var(--mono);font-size:13px;color:var(--text);word-break:break-all;margin-bottom:4px}
+.file-size{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.btn-dl{display:inline-block;background:var(--accent);border-radius:12px;color:#fff;font-family:var(--sans);font-size:15px;font-weight:800;padding:16px 32px;text-decoration:none;transition:box-shadow .2s,transform .1s;margin-bottom:12px}
+.btn-dl:hover{box-shadow:0 0 24px rgba(255,59,31,.5);transform:translateY(-1px)}
+.file-warn{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:1px}
+
+.audio-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px;max-width:500px;width:100%;text-align:center;animation:fadeUp .5s ease both}
+.wave{display:flex;align-items:center;justify-content:center;gap:5px;height:48px;margin-bottom:16px}
+.wave span{display:block;width:4px;background:var(--accent);border-radius:99px;box-shadow:0 0 8px rgba(255,59,31,.5)}
+.wave span:nth-child(1){height:16px;animation:wv 1.2s .0s ease-in-out infinite}
+.wave span:nth-child(2){height:32px;animation:wv 1.2s .1s ease-in-out infinite}
+.wave span:nth-child(3){height:44px;animation:wv 1.2s .2s ease-in-out infinite}
+.wave span:nth-child(4){height:28px;animation:wv 1.2s .3s ease-in-out infinite}
+.wave span:nth-child(5){height:48px;animation:wv 1.2s .4s ease-in-out infinite}
+.wave span:nth-child(6){height:36px;animation:wv 1.2s .3s ease-in-out infinite}
+.wave span:nth-child(7){height:44px;animation:wv 1.2s .2s ease-in-out infinite}
+.wave span:nth-child(8){height:24px;animation:wv 1.2s .1s ease-in-out infinite}
+.wave span:nth-child(9){height:38px;animation:wv 1.2s .05s ease-in-out infinite}
+.wave span:nth-child(10){height:18px;animation:wv 1.2s .0s ease-in-out infinite}
+@keyframes wv{0%,100%{transform:scaleY(1);opacity:1}50%{transform:scaleY(.3);opacity:.5}}
+.media-name{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:12px;letter-spacing:1px}
+audio{width:100%;margin-top:16px;border-radius:8px}
+
+.video-wrap{max-width:800px;width:100%;text-align:center}
+.video-wrap video{max-width:100%;max-height:75vh;border-radius:12px;border:1px solid var(--border);display:block;margin:0 auto}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="loading-flame">🔥</div>
+  <p class="loading-text">Verificando...</p>
+</div>
+
+<!-- Generic (no ?id) -->
+<div id="generic">
+  <div class="big-icon">🔒</div>
+  <h1 class="screen-title">Enlace no disponible</h1>
+  <p class="screen-sub">Este enlace no existe<br>o ya fue utilizado</p>
+</div>
+
+<!-- Expired -->
+<div id="expired">
+  <div class="big-icon" style="filter:grayscale(1)">💀</div>
+  <h1 class="screen-title">Contenido Destruido</h1>
+  <p class="screen-sub">Este link ya expiró o fue utilizado</p>
+</div>
+
+<!-- Countdown -->
+<div id="countdown">
+  <div class="cd-flame">🔥</div>
+  <h2 class="cd-title">Contenido secreto</h2>
+  <p class="cd-sub">Se destruirá después de esta visita</p>
+  <div class="cd-number" id="cdNum">3</div>
+  <p class="cd-msg">REVELANDO EN SEGUNDOS</p>
+</div>
+
+<!-- Viewer -->
+<div id="viewer">
+  <div class="viewer-bar">
+    <span class="viewer-badge">🔥 Este contenido se destruyó al verlo</span>
+  </div>
+  <div class="viewer-body" id="viewerBody"></div>
+</div>
+
+<!-- Iframe wrap -->
+<div id="iframeWrap">
+  <iframe id="theFrame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox" allowfullscreen></iframe>
+  <div id="iframeFallback">
+    <div style="font-size:48px;margin-bottom:16px">⚠️</div>
+    <h2 style="font-size:20px;font-weight:800;margin-bottom:8px">Este sitio no permite vista previa</h2>
+    <p style="font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:2px;margin-bottom:24px">REDIRIGIENDO...</p>
+    <div style="font-family:var(--mono);font-size:48px;font-weight:700;color:var(--accent)" id="fbCount">3</div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey:"AIzaSyBLqHcWApjbbqjasgk-H4bGg5KN5Bf-Fss",
+  authDomain:"burnlink-48b09.firebaseapp.com",
+  projectId:"burnlink-48b09",
+  storageBucket:"burnlink-48b09.firebasestorage.app",
+  messagingSenderId:"102519825848",
+  appId:"1:102519825848:web:6a3d1ac53fbff5de611b4d"
+});
+const db = firebase.firestore();
+
+function show(id){
+  ['loading','generic','expired','countdown','viewer','iframeWrap']
+    .forEach(x => document.getElementById(x).style.display='none');
+  const el = document.getElementById(id);
+  el.style.display = 'flex';
+}
+
+function fmtBytes(b){
+  if(b<1024) return b+' B';
+  if(b<1048576) return (b/1024).toFixed(1)+' KB';
+  return (b/1048576).toFixed(1)+' MB';
+}
+function fileIcon(m=''){
+  if(m.includes('pdf'))   return '📄';
+  if(m.includes('video')) return '🎥';
+  if(m.includes('audio')) return '🎵';
+  if(m.includes('zip'))   return '📦';
+  return '📎';
+}
+
+function openIframe(url){
+  show('iframeWrap');
+  document.getElementById('iframeWrap').style.display='block';
+  const frame    = document.getElementById('theFrame');
+  const fallback = document.getElementById('iframeFallback');
+  let loaded = false;
+  const t = setTimeout(()=>{
+    if(!loaded){
+      frame.style.display='none';
+      fallback.style.display='flex';
+      let c=3;
+      document.getElementById('fbCount').textContent=c;
+      const iv=setInterval(()=>{
+        c--;
+        document.getElementById('fbCount').textContent=c;
+        if(c<=0){clearInterval(iv);window.location.href=url;}
+      },1000);
+    }
+  },3000);
+  frame.src=url;
+  frame.onload=()=>{loaded=true;clearTimeout(t);};
+}
+
+function renderContent(link){
+  const body = document.getElementById('viewerBody');
+  const {type, content} = link;
+
+  if(type==='text'){
+    body.innerHTML=`<div style="max-width:680px;width:100%">
+      <p class="viewer-label">Mensaje Secreto</p>
+      <div class="msg-box">${content.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}</div>
+    </div>`;
+
+  }else if(type==='url'){
+    openIframe(content.url); return;
+
+  }else if(type==='image'){
+    body.innerHTML=`<div class="img-wrap">
+      <p class="viewer-label">Imagen Secreta</p>
+      <img src="${content.url}" alt="imagen"/>
+    </div>`;
+
+  }else if(type==='qr'){
+    body.innerHTML=`<div class="qr-wrap">
+      <p class="viewer-label">Código QR</p>
+      <img src="${content.url}" alt="QR"/>
+      <p class="qr-hint">Escaneá el código con tu cámara</p>
+    </div>`;
+
+  }else if(type==='audio'){
+    body.innerHTML=`<div>
+      <p class="viewer-label">Audio Secreto 🎵</p>
+      <div class="audio-card">
+        <div class="wave"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <p class="media-name">${content.name}</p>
+        <audio id="aud" controls><source src="${content.url}" type="${content.mimeType}"></audio>
+      </div>
+    </div>`;
+    setTimeout(()=>{const a=document.getElementById('aud');if(a)a.play().catch(()=>{});},400);
+
+  }else if(type==='video'){
+    body.innerHTML=`<div class="video-wrap">
+      <p class="viewer-label">Video Secreto 🎥</p>
+      <video id="vid" controls playsinline><source src="${content.url}" type="${content.mimeType}"></video>
+      <p class="media-name" style="margin-top:12px">${content.name}</p>
+    </div>`;
+    setTimeout(()=>{const v=document.getElementById('vid');if(v)v.play().catch(()=>{});},400);
+
+  }else if(type==='file'){
+    body.innerHTML=`<div class="file-wrap">
+      <p class="viewer-label">Archivo Secreto</p>
+      <div class="file-card">
+        <div class="file-icon">${fileIcon(content.mimeType)}</div>
+        <div>
+          <div class="file-name">${content.name}</div>
+          <div class="file-size">${fmtBytes(content.size)}</div>
+        </div>
+      </div>
+      <a href="${content.url}" download="${content.name}" class="btn-dl" target="_blank">⬇ Descargar archivo</a>
+      <p class="file-warn">⚠️ Descargá ahora — no funcionará de nuevo</p>
+    </div>`;
+  }
+
+  show('viewer');
+}
+
+function startCountdown(link){
+  show('countdown');
+  let c=3;
+  document.getElementById('cdNum').textContent=c;
+  const iv=setInterval(()=>{
+    c--;
+    document.getElementById('cdNum').textContent=c;
+    if(c<=0){
+      clearInterval(iv);
+      renderContent(link);
+    }
+  },1000);
+}
+
+(async function(){
+  // Safety timeout — si algo falla, mostrar genérica en 10s
+  const safety = setTimeout(()=>show('generic'), 10000);
+
+  const id = new URLSearchParams(window.location.search).get('id');
+
+  if(!id){
+    clearTimeout(safety);
+    show('generic');
+    return;
+  }
+
+  // Limpiar URL
+  history.replaceState(null,'','/');
+
+  try{
+    const snap = await db.collection('burnlinks').doc(id).get();
+    clearTimeout(safety);
+
+    if(!snap.exists){
+      show('expired'); return;
+    }
+
+    const link = snap.data();
+    if(Date.now() > link.expiresAt || (link.oneUse && link.used)){
+      show('expired'); return;
+    }
+
+    // Marcar usado
+    if(link.oneUse){
+      try{
+        await db.runTransaction(async tx=>{
+          const f = await tx.get(db.collection('burnlinks').doc(id));
+          if(f.data().used) throw new Error('used');
+          tx.update(db.collection('burnlinks').doc(id),{used:true});
+        });
+      }catch(e){
+        if(e.message==='used'){show('expired');return;}
+        throw e;
+      }
+    }
+
+    startCountdown(link);
+
+  }catch(e){
+    clearTimeout(safety);
+    console.error(e);
+    show('generic');
+  }
+})();
+</script>
+</body>
+</html>
