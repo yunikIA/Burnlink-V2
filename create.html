@@ -387,8 +387,18 @@ function getSecs(){
 /* Cloudinary upload */
 function uploadCL(file){
   return new Promise((res,rej)=>{
+    // Cloudinary necesita endpoint específico por tipo
+    const mime = file.type;
+    let resourceType = 'auto';
+    if(mime.startsWith('video/') || mime.startsWith('audio/')) resourceType = 'video';
+    else if(mime.startsWith('image/')) resourceType = 'image';
+    const uploadUrl = `https://api.cloudinary.com/v1_1/${CL_CLOUD}/${resourceType}/upload`;
+
     const fd=new FormData();
-    fd.append('file',file);fd.append('upload_preset',CL_PRESET);fd.append('folder','burnlinks');
+    fd.append('file',file);
+    fd.append('upload_preset',CL_PRESET);
+    fd.append('folder','burnlinks');
+
     const xhr=new XMLHttpRequest();
     document.getElementById('progressCard').style.display='block';
     xhr.upload.addEventListener('progress',e=>{
@@ -396,11 +406,17 @@ function uploadCL(file){
     });
     xhr.addEventListener('load',()=>{
       document.getElementById('progressCard').style.display='none';
-      if(xhr.status===200){const r=JSON.parse(xhr.responseText);res({url:r.secure_url,name:file.name,size:file.size,mimeType:file.type});}
-      else rej(new Error('Upload failed'));
+      if(xhr.status===200){
+        const r=JSON.parse(xhr.responseText);
+        res({url:r.secure_url,name:file.name,size:file.size,mimeType:file.type});
+      }else{
+        console.error('Cloudinary error:',xhr.responseText);
+        rej(new Error('Upload failed: '+xhr.status));
+      }
     });
     xhr.addEventListener('error',()=>{document.getElementById('progressCard').style.display='none';rej(new Error('Network error'));});
-    xhr.open('POST',CL_URL);xhr.send(fd);
+    xhr.open('POST',uploadUrl);
+    xhr.send(fd);
   });
 }
 
