@@ -83,6 +83,10 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 @keyframes wv{0%,100%{transform:scaleY(1);opacity:1}50%{transform:scaleY(.3);opacity:.5}}
 .media-name{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:12px;letter-spacing:1px}
 audio{width:100%;margin-top:16px;border-radius:8px}
+.play-btn{width:72px;height:72px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;margin:16px auto 0;transition:transform .15s,box-shadow .2s;box-shadow:0 0 24px rgba(255,59,31,.4)}
+.play-btn:hover{transform:scale(1.08);box-shadow:0 0 36px rgba(255,59,31,.6)}
+.play-btn svg{margin-left:4px}
+.play-btn.playing{background:#333}
 
 .video-wrap{max-width:800px;width:100%;text-align:center}
 .video-wrap video{max-width:100%;max-height:75vh;border-radius:12px;border:1px solid var(--border);display:block;margin:0 auto}
@@ -228,10 +232,34 @@ function renderContent(link){
       <div class="audio-card">
         <div class="wave"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
         <p class="media-name">${content.name}</p>
-        <audio id="aud" controls><source src="${content.url}" type="${content.mimeType}"></audio>
+        <audio id="aud"><source src="${content.url}" type="${content.mimeType||'audio/mpeg'}"></audio>
+        <button class="play-btn" id="playBtn" onclick="togglePlay()">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
+        </button>
       </div>
     </div>`;
-    setTimeout(()=>{const a=document.getElementById('aud');if(a)a.play().catch(()=>{});},400);
+    window.togglePlay=function(){
+      const a=document.getElementById('aud');
+      const btn=document.getElementById('playBtn');
+      if(!a)return;
+      if(a.paused){
+        a.play().then(()=>{
+          btn.classList.add('playing');
+          btn.innerHTML='<svg width="24" height="24" viewBox="0 0 24 24" fill="white"><rect x="5" y="3" width="4" height="18"/><rect x="15" y="3" width="4" height="18"/></svg>';
+        }).catch(e=>console.error(e));
+      }else{
+        a.pause();
+        btn.classList.remove('playing');
+        btn.innerHTML='<svg width="28" height="28" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>';
+      }
+    };
+    setTimeout(()=>{
+      const a=document.getElementById('aud');
+      if(a){a.addEventListener('ended',()=>{
+        const btn=document.getElementById('playBtn');
+        if(btn){btn.classList.remove('playing');btn.innerHTML='<svg width="28" height="28" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>';}
+      });}
+    },300);
 
   }else if(type==='video'){
     body.innerHTML=`<div class="video-wrap">
@@ -239,7 +267,7 @@ function renderContent(link){
       <video id="vid" controls playsinline><source src="${content.url}" type="${content.mimeType}"></video>
       <p class="media-name" style="margin-top:12px">${content.name}</p>
     </div>`;
-    setTimeout(()=>{const v=document.getElementById('vid');if(v)v.play().catch(()=>{});},400);
+    // Sin autoplay — el usuario inicia con los controles nativos
 
   }else if(type==='file'){
     body.innerHTML=`<div class="file-wrap">
