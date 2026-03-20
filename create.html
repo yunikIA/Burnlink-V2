@@ -423,8 +423,10 @@ async function uploadUC(file){
       hideProgress();
       if(xhr.status===200){
         const r=JSON.parse(xhr.responseText);
-        // Uploadcare devuelve UUID, construimos la URL
-        const url=`https://ucarecdn.com/${r.file}/`;
+        // Uploadcare devuelve UUID, incluimos el nombre del archivo
+        // para que el CDN sirva el Content-Type correcto (necesario para audio/video)
+        const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+        const url=`https://ucarecdn.com/${r.file}/${safeName}`;
         res({url, name:file.name, size:file.size, mimeType:file.type});
       }else{
         console.error('Uploadcare error:',xhr.responseText);
