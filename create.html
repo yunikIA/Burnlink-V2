@@ -286,9 +286,10 @@ const CL_CLOUD  = 'dyaggwmph';
 const CL_PRESET = 'burnlink';
 const CL_URL    = `https://api.cloudinary.com/v1_1/${CL_CLOUD}/auto/upload`;
 
-/* Uploadcare — para video y audio */
-const UC_KEY = '009a15bc6e596325653d';
-const UC_URL = 'https://upload.uploadcare.com/base/';
+/* Supabase Storage — para video y audio */
+const SB_URL    = 'https://mpetkrzpnqmtclkufwlc.supabase.co';
+const SB_KEY    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wZXRrcnpwbnFtdGNsa3Vmd2xjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMTUzNjksImV4cCI6MjA4OTU5MTM2OX0.otohyGyUHlZ102T4L9bCJgJcTj9rfYZbK3SGUHI-86U';
+const SB_BUCKET = 'media';
 
 let selSecs = 3600;
 let curType = 'text';
@@ -403,13 +404,13 @@ function hideProgress(){
   document.getElementById('progressFill').style.width='0%';
 }
 
-// Uploadcare — soporta video y audio sin restricciones
+// Supabase Storage — para video y audio
 async function uploadUC(file){
   showProgress(10,'Preparando...');
-  const fd=new FormData();
-  fd.append('UPLOADCARE_PUB_KEY', UC_KEY);
-  fd.append('UPLOADCARE_STORE', '1');
-  fd.append('file', file);
+  const ext = file.name.split('.').pop();
+  const fileName = Date.now()+'_'+Math.random().toString(36).slice(2)+'.'+ext;
+  const path = 'burnlinks/'+fileName;
+  const uploadUrl = SB_URL+'/storage/v1/object/'+SB_BUCKET+'/'+path;
 
   return new Promise((res,rej)=>{
     const xhr=new XMLHttpRequest();
@@ -421,21 +422,20 @@ async function uploadUC(file){
     });
     xhr.addEventListener('load',()=>{
       hideProgress();
-      if(xhr.status===200){
-        const r=JSON.parse(xhr.responseText);
-        // Uploadcare devuelve UUID, incluimos el nombre del archivo
-        // para que el CDN sirva el Content-Type correcto (necesario para audio/video)
-        const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-        const url=`https://ucarecdn.com/${r.file}/${safeName}`;
-        res({url, name:file.name, size:file.size, mimeType:file.type});
+      if(xhr.status===200||xhr.status===201){
+        const publicUrl = SB_URL+'/storage/v1/object/public/'+SB_BUCKET+'/'+path;
+        res({url:publicUrl, name:file.name, size:file.size, mimeType:file.type});
       }else{
-        console.error('Uploadcare error:',xhr.responseText);
+        console.error('Supabase error:',xhr.responseText);
         rej(new Error('Upload failed: '+xhr.status));
       }
     });
     xhr.addEventListener('error',()=>{hideProgress();rej(new Error('Network error'));});
-    xhr.open('POST', UC_URL);
-    xhr.send(fd);
+    xhr.open('PUT', uploadUrl);
+    xhr.setRequestHeader('Authorization','Bearer '+SB_KEY);
+    xhr.setRequestHeader('Content-Type', file.type);
+    xhr.setRequestHeader('x-upsert','true');
+    xhr.send(file);
   });
 }
 
@@ -470,7 +470,7 @@ async function uploadCL(file){
 async function uploadFile(file){
   const mime=file.type;
   if(mime.startsWith('video/')||mime.startsWith('audio/')){
-    return await uploadUC(file);   // Uploadcare para video/audio
+    return await uploadUC(file);   // Supabase para video/audio
   }else{
     return await uploadCL(file);   // Cloudinary para imagen/archivo
   }
